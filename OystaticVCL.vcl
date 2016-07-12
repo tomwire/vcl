@@ -135,7 +135,11 @@ sub vcl_fetch {
     set beresp.grace = 5s;
     return (deliver);
   }  
-  
+
+  if (req.url ~ "/cache"){
+      set beresp.stale_if_error = 31622400s;
+  }
+
   if (req.url ~ "/social/avatars" &&  req.url ~ "\.(png|gif|jpg|jpeg)$" ){
       set beresp.ttl = 31622400s;
   }
