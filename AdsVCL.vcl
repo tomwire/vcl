@@ -1,6 +1,10 @@
+pragma optional_param default_ssl_check_cert 0;
+pragma optional_param customer_id "3KBTlldJ6LyYKlNN2dzuya";
+C!
+W!
 # Backends
 
-backend F_S3_AWS {
+backend F_AWS_S3 {
     .connect_timeout = 1s;
     .dynamic = true;
     .port = "80";
@@ -8,7 +12,7 @@ backend F_S3_AWS {
     .first_byte_timeout = 15s;
     .max_connections = 200;
     .between_bytes_timeout = 10s;
-    .share_key = "205awbi9RgP5dqq9BO7MJu";
+    .share_key = "6eg7KW4UIRC0MEYuIYBr72";
   
       
     .probe = {
@@ -34,12 +38,12 @@ sub vcl_recv {
 
     
     set req.http.Fastly-Orig-Host = req.http.host;
-    set req.http.host = "o.oystatic.ignimgs.com.s3.amazonaws.com";
+    set req.http.host = "o.ads.ign.com";
             
 
     
   # default conditions
-  set req.backend = F_S3_AWS;
+  set req.backend = F_AWS_S3;
   
 
   
@@ -88,7 +92,7 @@ sub vcl_fetch {
  
  
       
-  # Gzip GZIP Rules
+  # Gzip GZIP Rule
   if ((beresp.status == 200 || beresp.status == 404) && (beresp.http.content-type ~ "^(text\/html|application\/x\-javascript|text\/css|application\/javascript|text\/javascript|application\/json|application\/vnd\.ms\-fontobject|application\/x\-font\-opentype|application\/x\-font\-truetype|application\/x\-font\-ttf|application\/xml|font\/eot|font\/opentype|font\/otf|image\/svg\+xml|image\/vnd\.microsoft\.icon|text\/plain|text\/xml)\s*($|;)" || req.url ~ "\.(css|js|html|eot|ico|otf|ttf|json)($|\?)" ) ) {
   
     # always set vary to make sure uncompressed versions dont always win
@@ -103,18 +107,25 @@ sub vcl_fetch {
       set beresp.gzip = true;
     }
   }
+
+  
+
  
       
 #--FASTLY FETCH END
+  
+   /* deliver stale if the object is available */
+  if (stale.exists) {
+      return(deliver_stale);
+  }
 
-
+  set beresp.stale_if_error = 1d;
+  set beresp.stale_while_revalidate = 10m;
 
   if ((beresp.status == 500 || beresp.status == 503) && req.restarts < 1 && (req.request == "GET" || req.request == "HEAD")) {
     restart;
   }
- 
   
-
   if(req.restarts > 0 ) {
     set beresp.http.Fastly-Restarts = req.restarts;
   }
@@ -135,42 +146,13 @@ sub vcl_fetch {
     set beresp.grace = 5s;
     return (deliver);
   }  
-
-  if (req.url ~ "\/cache"){
-      set beresp.stale_if_error = 1y;
-  }
-
-  if (req.url ~ "\/social\/avatars" &&  req.url ~ "\.(png|gif|jpg|jpeg)$" ){
-      set beresp.ttl = 1y;
-  }
-
-  if (req.url ~ "\/staticcache\/css\/xenforo" &&  req.url ~ "\.(css)$"){
-      set beresp.ttl = 1y;
-  } 
-
-  if (req.url ~ "\/src\/social\/img" && req.url ~ "\.(png|gif|jpg|jpeg)$"  ){
-      set beresp.ttl = 1y;
-  }
-
-  if (req.url ~ "\/src\/core\/img\/social\/avatar" && req.url ~ "\.(png|gif|jpg|jpeg)$"  ){
-      set beresp.ttl = 7d;
-  }
-
-  if (req.url ~ "\/src\/xenforo" && req.url ~ "\.(css|js|png|gif|jpg|jpeg)$"  ){
-      set beresp.ttl = 7d;
-  }
-
-  if (req.url ~ "\/fonts\/static\/core\/css\/fonts"  ){
-      set beresp.ttl = 0s; 
-  } 
+  
 
   if (beresp.http.Expires || beresp.http.Surrogate-Control ~ "max-age" || beresp.http.Cache-Control ~"(s-maxage|max-age)") {
     # keep the ttl here
-    set beresp.stale_if_error = 5m;
-
   } else {
         # apply the default ttl
-    set beresp.ttl = 604800s;
+    set beresp.ttl = 3600s;
     
   }
 
@@ -485,4 +467,3 @@ sub vcl_hash {
 
 
 }
-
