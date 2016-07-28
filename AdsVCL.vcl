@@ -1,8 +1,3 @@
-pragma optional_param default_ssl_check_cert 0;
-pragma optional_param customer_id "3KBTlldJ6LyYKlNN2dzuya";
-C!
-W!
-# Backends
 
 backend F_AWS_S3 {
     .connect_timeout = 1s;
@@ -109,20 +104,19 @@ sub vcl_fetch {
   }
 
   
-
- 
-      
-#--FASTLY FETCH END
-  
-   /* deliver stale if the object is available */
+  /* deliver stale if the object is available */
   if (stale.exists) {
       return(deliver_stale);
   }
 
   set beresp.stale_if_error = 1d;
-  set beresp.stale_while_revalidate = 10m;
 
-  if ((beresp.status == 500 || beresp.status == 503) && req.restarts < 1 && (req.request == "GET" || req.request == "HEAD")) {
+
+ 
+      
+#--FASTLY FETCH END
+  
+   if ((beresp.status == 500 || beresp.status == 503) && req.restarts < 1 && (req.request == "GET" || req.request == "HEAD")) {
     restart;
   }
   
